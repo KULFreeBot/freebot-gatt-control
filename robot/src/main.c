@@ -301,8 +301,7 @@ void t_startup_ep(void *, void *, void *)
 
     LOG_DBG("Bluetooth initialized");
 
-    err = 0;
-    fb_init(); // TODO: make fb_init return status code
+    err = fb_init();
     err |= fb_v_measure_select(V_CAP);
     if (err)
     {
