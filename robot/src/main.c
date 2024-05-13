@@ -1,7 +1,7 @@
 /**
  * @file main.c
  * @author Lowie Deferme <lowie.deferme@kuleuven.be>
- * @brief Zephyr tasks for FreeBot control over BLE
+ * @brief Zephyr tasks for FreeBot control over BLE GATT
  * @version 0.1
  * @date 2024-05-10
  *
@@ -14,10 +14,11 @@
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/addr.h>
 #include <zephyr/bluetooth/conn.h>
-// #include <zephyr/bluetooth/uuid.h>
-// #include <zephyr/bluetooth/gatt.h>
+#include <zephyr/bluetooth/uuid.h>
+#include <zephyr/bluetooth/gatt.h>
 
 #include "freebot.h"
+#include "freebot_control.h"
 
 LOG_MODULE_REGISTER(fb_ble_ctrl, LOG_LEVEL_DBG);
 
@@ -57,7 +58,7 @@ static const struct bt_data ad[] = {
 
 /** @brief BLE Scan response data */
 static const struct bt_data sd[] = {
-    // TODO: put useful data in scan response pkt
+    BT_DATA_BYTES(BT_DATA_UUID128_SOME, BT_UUID_FBCS_VAL),
 };
 
 /** @brief BLE Preferred radio mode */
@@ -95,11 +96,12 @@ static void on_connected(struct bt_conn *conn, uint8_t err)
 /** @brief On BLE disconnected callback */
 static void on_disconnected(struct bt_conn *conn, uint8_t reason)
 {
+    fb_stop();
+    update_status(BLE_CONNECTING);
+
     char addr[BT_ADDR_LE_STR_LEN];
     bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
-
     LOG_INF("Disconnected: %s (reason 0x%02x)", addr, reason);
-    update_status(BLE_CONNECTING);
 
     int err = bt_le_adv_start(BT_LE_ADV_CONN, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
     if (err)
@@ -150,6 +152,135 @@ struct bt_conn_cb connection_cb = {
 };
 
 // -----------------------------------------------------------------------------
+// Implementation of FreeBot Control Service (BLE GATT layer)
+// -----------------------------------------------------------------------------
+
+static fbcs_rpm_t fbcs_rpm;
+static fbcs_angle_t fbcs_angle;
+static fbcs_v_t fbcs_v;
+
+static ssize_t fbcs_drive(struct bt_conn *conn, const struct bt_gatt_attr *attr, const void *buf, uint16_t len, uint16_t offset, uint8_t flags)
+{
+    LOG_DBG("handle: %u, conn: %p", attr->handle, (void *)conn);
+
+    if (len != sizeof(fbcs_drive_t))
+    {
+        LOG_WRN("Incorrect data length for drive attribute");
+        return BT_GATT_ERR(BT_ATT_ERR_INVALID_ATTRIBUTE_LEN);
+    }
+
+    if (offset != 0)
+    {
+        LOG_WRN("Incorrect data offset for drive attribute");
+        return BT_GATT_ERR(BT_ATT_ERR_INVALID_OFFSET);
+    }
+
+    fbcs_drive_t drive_cmd = *((fbcs_drive_t *)buf);
+    switch (drive_cmd)
+    {
+    case FBCS_STOP:
+        fb_stop();
+        break;
+    case FBCS_MV_FORWARD:
+        fb_straight_forw();
+        break;
+    case FBCS_MV_BACKWARD:
+        fb_straight_back();
+        break;
+    case FBCS_MV_RIGHT:
+        fb_side_right();
+        break;
+    case FBCS_MV_LEFT:
+        fb_side_left();
+        break;
+    case FBCS_ROT_CW:
+        fb_rotate_cw();
+        break;
+    case FBCS_ROT_CCW:
+        fb_rotate_ccw();
+        break;
+
+    default:
+        LOG_WRN("Received unknown drive cmd");
+        fb_stop();
+        break;
+    }
+
+    return len;
+}
+
+static ssize_t fbcs_rpm_read(struct bt_conn *conn, const struct bt_gatt_attr *attr, void *buf, uint16_t len, uint16_t offset)
+{
+    LOG_DBG("handle: %u, conn: %p", attr->handle, (void *)conn);
+
+    // Read motor speeds
+    fb_motor_speed_t speed;
+    fb_get_motor_speed(&speed);
+
+    // Populate data struct
+    fbcs_rpm.M1 = (int32_t)speed.front_left;
+    fbcs_rpm.M2 = (int32_t)speed.front_right;
+    fbcs_rpm.M3 = (int32_t)speed.back_left;
+    fbcs_rpm.M4 = (int32_t)speed.back_right;
+
+    return bt_gatt_attr_read(conn, attr, buf, len, offset, &fbcs_rpm, sizeof(fbcs_rpm));
+}
+
+static ssize_t fbcs_angle_read(struct bt_conn *conn, const struct bt_gatt_attr *attr, void *buf, uint16_t len, uint16_t offset)
+{
+    LOG_DBG("handle: %u, conn: %p", attr->handle, (void *)conn);
+
+    // Read motor angles
+    fb_motor_angle_t angle;
+    fb_get_motor_angle(&angle);
+
+    // Populate data struct
+    fbcs_angle.M1 = (int32_t)angle.front_left;
+    fbcs_angle.M2 = (int32_t)angle.front_right;
+    fbcs_angle.M3 = (int32_t)angle.back_left;
+    fbcs_angle.M4 = (int32_t)angle.back_right;
+
+    return bt_gatt_attr_read(conn, attr, buf, len, offset, &fbcs_angle, sizeof(fbcs_angle));
+}
+
+static ssize_t fbcs_v_read(struct bt_conn *conn, const struct bt_gatt_attr *attr, void *buf, uint16_t len, uint16_t offset)
+{
+    LOG_DBG("handle: %u, conn: %p", attr->handle, (void *)conn);
+
+    fbcs_v = (fbcs_v_t)fb_v_measure();
+
+    return bt_gatt_attr_read(conn, attr, buf, len, offset, &fbcs_v, sizeof(fbcs_v));
+}
+
+// -----------------------------------------------------------------------------
+
+BT_GATT_SERVICE_DEFINE(
+    // FreeBot Control Service
+    fbcs_svc, BT_GATT_PRIMARY_SERVICE(BT_UUID_FBCS),
+    // FreeBot Drive characteristic
+    BT_GATT_CHARACTERISTIC(BT_UUID_FBCS_DRV,
+                           BT_GATT_CHRC_WRITE,
+                           BT_GATT_PERM_WRITE,
+                           NULL, fbcs_drive, NULL),
+    // FreeBot Motor RPM characteristic
+    BT_GATT_CHARACTERISTIC(BT_UUID_FBCS_RPM,
+                           BT_GATT_CHRC_READ,
+                           BT_GATT_PERM_READ,
+                           fbcs_rpm_read, NULL, NULL),
+    // FreeBot Motor Angle characteristic
+    BT_GATT_CHARACTERISTIC(BT_UUID_FBCS_ANGLE,
+                           BT_GATT_CHRC_READ,
+                           BT_GATT_PERM_READ,
+                           fbcs_angle_read, NULL, NULL),
+    // FreeBot Voltage characteristic
+    BT_GATT_CHARACTERISTIC(BT_UUID_FBCS_V,
+                           BT_GATT_CHRC_READ,
+                           BT_GATT_PERM_READ,
+                           fbcs_v_read, NULL, NULL)
+    // TODO: Notify when V drops below setvalue
+);
+
+// -----------------------------------------------------------------------------
 // Entry points for Zephyr threads
 // -----------------------------------------------------------------------------
 
@@ -172,6 +303,7 @@ void t_startup_ep(void *, void *, void *)
 
     err = 0;
     fb_init(); // TODO: make fb_init return status code
+    err |= fb_v_measure_select(V_CAP);
     if (err)
     {
         LOG_ERR("FreeBot init failed (err %d)", err);
