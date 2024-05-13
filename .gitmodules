@@ -1,0 +1,6 @@
+[submodule "robot/lib/freebot"]
+	path = robot/lib/freebot
+	url = https://gitlab.kuleuven.be/distrinet/education/software-for-real-time-control/freebot/lib.git
+[submodule "robot/boards"]
+	path = robot/boards
+	url = https://gitlab.kuleuven.be/distrinet/education/software-for-real-time-control/freebot/board.git

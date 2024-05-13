@@ -1,0 +1,10 @@
+{
+    "nrf-connect.applications": [
+        "${workspaceFolder}/robot",
+        "${workspaceFolder}/control"
+    ],
+    "nrf-connect.boardRoots": [
+        "${workspaceFolder}/robot"
+    ],
+    "cmake.configureOnOpen": false,
+}
