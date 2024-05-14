@@ -1,7 +1,7 @@
 /**
  * @file main.c
  * @author Lowie Deferme <lowie.deferme@kuleuven.be>
- * @brief Zephyr tasks for FreeBot control over BLE GATT
+ * @brief FreeBot control over BLE GATT service
  * @version 0.1
  * @date 2024-05-10
  *
@@ -20,7 +20,7 @@
 #include "freebot.h"
 #include "freebot_control.h"
 
-LOG_MODULE_REGISTER(fb_ble_ctrl, LOG_LEVEL_DBG);
+LOG_MODULE_REGISTER(fb_ble_ctrl, LOG_LEVEL_INF);
 
 // -----------------------------------------------------------------------------
 // Structures & methods for inter-thread communication/syncronization
@@ -30,7 +30,7 @@ K_MUTEX_DEFINE(status_mutex);
 
 enum status_e
 {
-    BLE_CONNECTING,
+    BLE_ADVERTISING,
     BLE_CONNECTED,
     BLE_ERROR,
     FB_ERROR,
@@ -97,7 +97,7 @@ static void on_connected(struct bt_conn *conn, uint8_t err)
 static void on_disconnected(struct bt_conn *conn, uint8_t reason)
 {
     fb_stop();
-    update_status(BLE_CONNECTING);
+    update_status(BLE_ADVERTISING);
 
     char addr[BT_ADDR_LE_STR_LEN];
     bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
@@ -288,7 +288,7 @@ void t_startup_ep(void *, void *, void *)
 {
     int err = 0;
 
-    update_status(BLE_CONNECTING);
+    update_status(BLE_ADVERTISING);
 
     err = bt_enable(NULL);
     if (err)
@@ -335,7 +335,7 @@ void t_status_led_ep(void *, void *, void *)
         k_mutex_lock(&status_mutex, K_FOREVER);
         switch (status_v)
         {
-        case BLE_CONNECTING:
+        case BLE_ADVERTISING:
             D15_pattern = 0b10101010;
             D16_pattern = 0b10101010;
             break;
