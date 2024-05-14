@@ -3,4 +3,6 @@ find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 
 project(fb_ble_ctrl)
 
+include_directories(lib/freebot_control/inc)
+
 target_sources(app PRIVATE src/main.c)
