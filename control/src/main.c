@@ -22,6 +22,13 @@
 LOG_MODULE_REGISTER(gw_ble_ctrl, LOG_LEVEL_DBG);
 
 // -----------------------------------------------------------------------------
+// Structures & methods for inter-thread communication/syncronization
+// -----------------------------------------------------------------------------
+
+// Semaphore for ble connection: starts unavailable
+static K_SEM_DEFINE(ble_conn_sem, 0, 1);
+
+// -----------------------------------------------------------------------------
 // Bluetooth LE constants and callbacks
 // -----------------------------------------------------------------------------
 
@@ -108,63 +115,64 @@ static uint8_t dis_cb(struct bt_conn *conn, const struct bt_gatt_attr *attr, str
 
     if (!attr)
     {
-        LOG_INF("%s", "Service discovery complete");
+        LOG_DBG("%s", "No more attributes found");
         (void)memset(params, 0, sizeof(*params));
-        // TODO: Unblock main application loop
+
+        // FIXME: verify that all characteristics are found
+
+        // Unlock connection semaphore since GATT discovery is complete
+        k_sem_give(&ble_conn_sem);
+        LOG_DBG("Connection semaphore unlocked");
+
+        // Stop GATT discovery
         return BT_GATT_ITER_STOP;
     }
 
     uint16_t attr_handle = bt_gatt_attr_value_handle(attr);
 
+    // Check which service/characteristic was discovered
     if (bt_uuid_cmp(params->uuid, BT_UUID_FBCS) == 0)
     {
         LOG_DBG("Found robot control service @ 0x%04x", attr_handle);
 
         memcpy(params->uuid, BT_UUID_FBCS_DRV, sizeof(dis_uuid));
-        params->type = BT_GATT_DISCOVER_CHARACTERISTIC;
-        params->start_handle = attr_handle + 1;
     }
     else if (bt_uuid_cmp(params->uuid, BT_UUID_FBCS_DRV) == 0)
     {
         LOG_DBG("Found drive characteristic @ 0x%04x", attr_handle);
 
         memcpy(params->uuid, BT_UUID_FBCS_RPM, sizeof(dis_uuid));
-        params->type = BT_GATT_DISCOVER_CHARACTERISTIC;
-        params->start_handle = attr_handle + 1;
     }
     else if (bt_uuid_cmp(params->uuid, BT_UUID_FBCS_RPM) == 0)
     {
         LOG_DBG("Found voltage characteristic @ 0x%04x", attr_handle);
 
         memcpy(params->uuid, BT_UUID_FBCS_ANGLE, sizeof(dis_uuid));
-        params->type = BT_GATT_DISCOVER_CHARACTERISTIC;
-        params->start_handle = attr_handle + 1;
     }
     else if (bt_uuid_cmp(params->uuid, BT_UUID_FBCS_ANGLE) == 0)
     {
         LOG_DBG("Found rpm characteristic @ 0x%04x", attr_handle);
 
         memcpy(params->uuid, BT_UUID_FBCS_V, sizeof(dis_uuid));
-        params->type = BT_GATT_DISCOVER_CHARACTERISTIC;
-        params->start_handle = attr_handle + 1;
     }
     else if (bt_uuid_cmp(params->uuid, BT_UUID_FBCS_V) == 0)
     {
         LOG_DBG("Found angle characteristic @ 0x%04x", attr_handle);
 
         params->uuid = NULL;
-        params->type = BT_GATT_DISCOVER_CHARACTERISTIC;
-        params->start_handle = attr_handle + 1;
     }
     else
     {
         LOG_WRN("Found unknown GATT attribute @ 0x%04x", attr_handle);
 
         params->uuid = NULL;
-        params->type = BT_GATT_DISCOVER_CHARACTERISTIC;
-        params->start_handle = attr_handle + 1;
     }
 
+    // Set params for next discovery
+    params->type = BT_GATT_DISCOVER_CHARACTERISTIC;
+    params->start_handle = attr_handle + 1;
+
+    // Next discovery
     err = bt_gatt_discover(ble_conn, params);
     if (err != 0)
     {
@@ -220,7 +228,7 @@ static void on_connected(struct bt_conn *conn, uint8_t err)
         LOG_ERR("Discover failed (err %d)", err);
         return;
     }
-    LOG_INF("%s", "GATT Service discovery started");
+    LOG_DBG("GATT Service discovery started");
 }
 
 /** @brief On BLE disconnected callback */
@@ -233,6 +241,9 @@ static void on_disconnected(struct bt_conn *conn, uint8_t reason)
     {
         return;
     }
+
+    // Make ble connection semaphore unavailable
+    k_sem_reset(&ble_conn_sem);
 
     LOG_INF("Disconnected: %s (reason 0x%02x)", addr, reason);
 
@@ -280,19 +291,22 @@ static struct bt_gatt_cb gatt_cb = {
 };
 
 // -----------------------------------------------------------------------------
-// Gateway's main()
+// Creation of Zephyr threads
 // -----------------------------------------------------------------------------
 
-int main(void)
+void t_ble_setup_ep(void *, void *, void *)
 {
     int err;
+
+    // Make ble conn semaphore unavailable
+    k_sem_reset(&ble_conn_sem);
 
     // Build target's (FreeBot) BLE address
     err = bt_addr_le_from_str(FB_BLE_ADDR, "random", &fb_ble_addr);
     if (err)
     {
         LOG_ERR("Could not create target address (err %d)", err);
-        return 0;
+        return;
     }
 
     // Enable bluetooth & register connection callbacks
@@ -300,7 +314,7 @@ int main(void)
     if (err)
     {
         LOG_ERR("Bluetooth initialization failed (err %d)", err);
-        return 0;
+        return;
     }
     bt_conn_cb_register(&connection_cb);
     bt_gatt_cb_register(&gatt_cb);
@@ -312,8 +326,120 @@ int main(void)
     if (err)
     {
         LOG_ERR("BLE scanning failed to start (err %d)", err);
-        return 0;
+        return;
+    }
+}
+
+#define T_BLE_SETUP_STACKSIZE 1024
+#define T_BLE_SETUP_PRIORITY -1 /* Should be smaller than main since it must execute first */
+#define T_BLE_SETUP_OPTIONS 0
+#define T_BLE_SETUP_DELAY 0
+K_THREAD_DEFINE(ble_setup, T_BLE_SETUP_STACKSIZE, t_ble_setup_ep, NULL, NULL, NULL, T_BLE_SETUP_PRIORITY, T_BLE_SETUP_OPTIONS, T_BLE_SETUP_DELAY);
+
+// -----------------------------------------------------------------------------
+// Gateway's main()
+// -----------------------------------------------------------------------------
+
+int main(void)
+{
+    int err;
+    static fbcs_drive_t cmd;
+
+    if (k_sem_take(&ble_conn_sem, K_FOREVER))
+    {
+        LOG_WRN("Could not take connection semaphore (err %d)", err);
+    }
+    else
+    {
+        LOG_DBG("Command send: move forward");
+        cmd = FBCS_MV_FORWARD;
+        bt_gatt_write_without_response(ble_conn, 0x0012, &cmd, sizeof(cmd), false);
+        k_sem_give(&ble_conn_sem);
     }
 
-    return 0;
+    k_sleep(K_MSEC(500));
+
+    if (k_sem_take(&ble_conn_sem, K_FOREVER))
+    {
+        LOG_WRN("Could not take connection semaphore (err %d)", err);
+    }
+    else
+    {
+        cmd = FBCS_MV_BACKWARD;
+        bt_gatt_write_without_response(ble_conn, 0x0012, &cmd, sizeof(cmd), false);
+        LOG_DBG("Command send: move backward");
+        k_sem_give(&ble_conn_sem);
+    }
+
+    k_sleep(K_MSEC(500));
+
+    if (k_sem_take(&ble_conn_sem, K_FOREVER))
+    {
+        LOG_WRN("Could not take connection semaphore (err %d)", err);
+    }
+    else
+    {
+        cmd = FBCS_MV_LEFT;
+        bt_gatt_write_without_response(ble_conn, 0x0012, &cmd, sizeof(cmd), false);
+        LOG_DBG("Command send: move left");
+        k_sem_give(&ble_conn_sem);
+    }
+
+    k_sleep(K_MSEC(500));
+
+    if (k_sem_take(&ble_conn_sem, K_FOREVER))
+    {
+        LOG_WRN("Could not take connection semaphore (err %d)", err);
+    }
+    else
+    {
+        cmd = FBCS_MV_RIGHT;
+        bt_gatt_write_without_response(ble_conn, 0x0012, &cmd, sizeof(cmd), false);
+        LOG_DBG("Command send: move right");
+        k_sem_give(&ble_conn_sem);
+    }
+
+    k_sleep(K_MSEC(500));
+
+    if (k_sem_take(&ble_conn_sem, K_FOREVER))
+    {
+        LOG_WRN("Could not take connection semaphore (err %d)", err);
+    }
+    else
+    {
+        cmd = FBCS_ROT_CW;
+        bt_gatt_write_without_response(ble_conn, 0x0012, &cmd, sizeof(cmd), false);
+        LOG_DBG("Command send: rotate clockwise");
+        k_sem_give(&ble_conn_sem);
+    }
+
+    k_sleep(K_MSEC(500));
+
+    if (k_sem_take(&ble_conn_sem, K_FOREVER))
+    {
+        LOG_WRN("Could not take connection semaphore (err %d)", err);
+    }
+    else
+    {
+        cmd = FBCS_ROT_CCW;
+        bt_gatt_write_without_response(ble_conn, 0x0012, &cmd, sizeof(cmd), false);
+        LOG_DBG("Command send: rotate counterclockwise");
+        k_sem_give(&ble_conn_sem);
+    }
+
+    k_sleep(K_MSEC(500));
+
+    if (k_sem_take(&ble_conn_sem, K_FOREVER))
+    {
+        LOG_WRN("Could not take connection semaphore (err %d)", err);
+    }
+    else
+    {
+        cmd = FBCS_STOP;
+        bt_gatt_write_without_response(ble_conn, 0x0012, &cmd, sizeof(cmd), false);
+        LOG_DBG("Command send: stop");
+        k_sem_give(&ble_conn_sem);
+    }
+    // Sleep forever: suspends thread
+    k_sleep(K_FOREVER);
 }

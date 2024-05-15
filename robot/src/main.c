@@ -20,7 +20,7 @@
 #include "freebot.h"
 #include "freebot_control.h"
 
-LOG_MODULE_REGISTER(fb_ble_ctrl, LOG_LEVEL_INF);
+LOG_MODULE_REGISTER(fb_ble_ctrl, LOG_LEVEL_DBG);
 
 // -----------------------------------------------------------------------------
 // Structures & methods for inter-thread communication/syncronization
@@ -180,24 +180,31 @@ static ssize_t fbcs_drive(struct bt_conn *conn, const struct bt_gatt_attr *attr,
     {
     case FBCS_STOP:
         fb_stop();
+        LOG_DBG("Robot stopped");
         break;
     case FBCS_MV_FORWARD:
         fb_straight_forw();
+        LOG_DBG("Robot moving forward");
         break;
     case FBCS_MV_BACKWARD:
         fb_straight_back();
+        LOG_DBG("Robot moving backward");
         break;
     case FBCS_MV_RIGHT:
         fb_side_right();
+        LOG_DBG("Robot moving right");
         break;
     case FBCS_MV_LEFT:
         fb_side_left();
+        LOG_DBG("Robot moving left");
         break;
     case FBCS_ROT_CW:
         fb_rotate_cw();
+        LOG_DBG("Robot rotating clockwise");
         break;
     case FBCS_ROT_CCW:
         fb_rotate_ccw();
+        LOG_DBG("Robot rotating counterclockwise");
         break;
 
     default:
@@ -259,7 +266,7 @@ BT_GATT_SERVICE_DEFINE(
     fbcs_svc, BT_GATT_PRIMARY_SERVICE(BT_UUID_FBCS),
     // FreeBot Drive characteristic
     BT_GATT_CHARACTERISTIC(BT_UUID_FBCS_DRV,
-                           BT_GATT_CHRC_WRITE,
+                           BT_GATT_CHRC_WRITE | BT_GATT_CHRC_WRITE_WITHOUT_RESP,
                            BT_GATT_PERM_WRITE,
                            NULL, fbcs_drive, NULL),
     // FreeBot Motor RPM characteristic
