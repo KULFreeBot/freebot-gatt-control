@@ -16,4 +16,4 @@ This service has the following characteristics:
 
 ## Controller
 
-TODO
+A rust TUI app to control the robot
