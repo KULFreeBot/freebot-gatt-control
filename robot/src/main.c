@@ -158,6 +158,7 @@ struct bt_conn_cb connection_cb = {
 static fbcs_rpm_t fbcs_rpm;
 static fbcs_angle_t fbcs_angle;
 static fbcs_v_t fbcs_v;
+static fbcs_led_t fbcs_leds;
 
 static ssize_t fbcs_drive(struct bt_conn *conn, const struct bt_gatt_attr *attr, const void *buf, uint16_t len, uint16_t offset, uint8_t flags)
 {
@@ -259,6 +260,20 @@ static ssize_t fbcs_v_read(struct bt_conn *conn, const struct bt_gatt_attr *attr
     return bt_gatt_attr_read(conn, attr, buf, len, offset, &fbcs_v, sizeof(fbcs_v));
 }
 
+static ssize_t fbcs_led_read(struct bt_conn *conn, const struct bt_gatt_attr *attr, void *buf, uint16_t len, uint16_t offset)
+{
+    LOG_DBG("handle: %u, conn: %p", attr->handle, (void *)conn);
+
+    int d15 = (fb_led_status(D15) == 1);
+    int d16 = (fb_led_status(D16) == 1);
+
+    LOG_DBG("D15: %d, D16: %d", d15, d16);
+
+    fbcs_leds = (d16 << 1) | d15;
+
+    return bt_gatt_attr_read(conn, attr, buf, len, offset, &fbcs_leds, sizeof(fbcs_leds));
+}
+
 // -----------------------------------------------------------------------------
 
 BT_GATT_SERVICE_DEFINE(
@@ -283,7 +298,12 @@ BT_GATT_SERVICE_DEFINE(
     BT_GATT_CHARACTERISTIC(BT_UUID_FBCS_V,
                            BT_GATT_CHRC_READ,
                            BT_GATT_PERM_READ,
-                           fbcs_v_read, NULL, NULL)
+                           fbcs_v_read, NULL, NULL),
+    // FreeBot LED characteristic
+    BT_GATT_CHARACTERISTIC(BT_UUID_FBCS_LED,
+                           BT_GATT_CHRC_READ,
+                           BT_GATT_PERM_READ,
+                           fbcs_led_read, NULL, NULL)
     // TODO: Notify when V drops below setvalue
 );
 

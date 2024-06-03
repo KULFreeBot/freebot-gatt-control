@@ -170,8 +170,8 @@ impl FreeBotPeripheral {
         // FIXME: FreeBot currently has no GATT characteristic for LED status
         if let Some(c) = self.characteristic(FreeBotUuid::LedChar) {
             if let Ok(buff) = self.ble_peripheral.read(&c).await {
-                if buff.len() == 2 {
-                    return Some((buff[0], buff[1]));
+                if buff.len() == 1 {
+                    return Some(((buff[0] & 0b10) >> 1, buff[0] & 0b01));
                 }
             }
         }

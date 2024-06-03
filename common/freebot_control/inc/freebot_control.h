@@ -34,6 +34,10 @@
 #define BT_UUID_FBCS_V_VAL BT_UUID_128_ENCODE(0x00000034, 0x0000, 0x1000, 0x8000, 0x00805f9b34fb)
 #define BT_UUID_FBCS_V BT_UUID_DECLARE_128(BT_UUID_FBCS_V_VAL)
 
+/* LED Characteristic */
+#define BT_UUID_FBCS_LED_VAL BT_UUID_128_ENCODE(0x00000035, 0x0000, 0x1000, 0x8000, 0x00805f9b34fb)
+#define BT_UUID_FBCS_LED BT_UUID_DECLARE_128(BT_UUID_FBCS_LED_VAL)
+
 /* Encoding for drive cmd */
 #define FBCS_STOP        0b0000
 #define FBCS_MV_FORWARD  0b0010
@@ -66,5 +70,8 @@ typedef struct
 
 /** @brief Voltage data format */
 typedef uint16_t fbcs_v_t;
+
+/** @brief Led status data format */
+typedef uint8_t fbcs_led_t;
 
 #endif /* FB_CTRL_H */
