@@ -1,10 +1,11 @@
 use crossterm::{
-    execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    ExecutableCommand,
 };
 use ratatui::{backend::CrosstermBackend, Terminal};
 use std::{io, sync::Arc, time::Duration};
 use tokio::{sync::Mutex, time::sleep};
+use tracing::info;
 
 mod app;
 mod ble;
@@ -15,18 +16,28 @@ async fn main() -> io::Result<()> {
     // Application state: a vector with FreeBots
     let bots = Arc::new(Mutex::new(Vec::new()));
 
+    // Initialize tracing (logger)
+    let log_file = std::fs::File::create("controller.log").unwrap(); // FIXME: write to more sensical place
+    let subscriber = tracing_subscriber::fmt()
+        .compact()
+        .with_target(false)
+        .with_level(true)
+        .with_file(true)
+        .with_line_number(true)
+        .with_thread_ids(true)
+        .with_ansi(false)
+        .with_writer(log_file)
+        .finish();
+    let _ = tracing::subscriber::set_global_default(subscriber);
+
     // Scan for FreeBots and connect to them in the background
+    info!("Discovering bots...");
     let ble_discovery_handle = tokio::spawn(ble::scan_unchecked(bots.clone()));
-
-    // Poll bot vector until at least one bot is connected
-    while bots.lock().await.is_empty() {
-        sleep(Duration::from_millis(100)).await;
-    }
-
-    println!("Starting TUI..."); // DEBUG print
+    sleep(Duration::from_millis(1000)).await;
 
     // Initialize terminal for user interface
-    let _ = execute!(io::stdout(), EnterAlternateScreen);
+    info!("Starting TUI...");
+    let _ = io::stdout().execute(EnterAlternateScreen);
     let _ = enable_raw_mode();
     let terminal: app::Tui = Terminal::new(CrosstermBackend::new(io::stdout())).unwrap();
 
@@ -35,10 +46,10 @@ async fn main() -> io::Result<()> {
     let app_result = app.run(terminal).await;
 
     // Restore terminal to its original state
-    let _ = execute!(io::stdout(), LeaveAlternateScreen);
+    let _ = io::stdout().execute(LeaveAlternateScreen);
     let _ = disable_raw_mode();
 
-    println!("Exited TUI"); // DEBUG print
+    info!("Exited TUI");
 
     // Disconnect from all bots
     {
@@ -48,7 +59,7 @@ async fn main() -> io::Result<()> {
         }
     }
 
-    println!("Disconnected bots"); // DEBUG print
+    info!("Disconnected bots");
 
     // Stop discovery task
     ble_discovery_handle.abort();

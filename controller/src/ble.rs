@@ -11,6 +11,7 @@ use futures::StreamExt;
 use std::error::Error;
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use tracing::{info, warn};
 use uuid::Uuid;
 
 use crate::model::FreeBot;
@@ -69,6 +70,7 @@ struct AngleCharData {
 pub struct FreeBotPeripheral {
     ble_peripheral: Peripheral,
     pub digital_twin: FreeBot,
+    pub active: bool,
 }
 
 impl FreeBotPeripheral {
@@ -95,14 +97,15 @@ impl FreeBotPeripheral {
         if let Some(v) = self.read_voltage().await {
             self.digital_twin.update_cap_voltage(v.into());
         } else {
-            // println!("[WARN] {}: Could not get Vcap", self.address())
+            warn!("Could not get Vcap: {}", self.address())
         }
 
         // Update led status
         if let Some((d15, d16)) = self.read_leds().await {
             self.digital_twin.update_leds(d15, d16);
         } else {
-            // println!("[WARN] {}: Could not get LEDs", self.address())
+            warn!("Could not get LEDs: {}", self.address())
+
         }
 
         // Update motor rpm
@@ -110,7 +113,8 @@ impl FreeBotPeripheral {
             self.digital_twin
                 .update_motor_rpm(rpm.m1, rpm.m2, rpm.m3, rpm.m4)
         } else {
-            // println!("[WARN] {}: Could not get motor rpm", self.address())
+            warn!("Could not get motor RPM: {}", self.address())
+
         }
 
         // Update motor angles
@@ -118,7 +122,7 @@ impl FreeBotPeripheral {
             self.digital_twin
                 .update_motor_angles(angles.m1, angles.m2, angles.m3, angles.m4)
         } else {
-            // println!("[WARN] {}: Could not get motor angles", self.address())
+            warn!("Could not get motor angles: {}", self.address())
         }
     }
 
@@ -207,7 +211,7 @@ async fn scan(bots: Arc<Mutex<Vec<FreeBotPeripheral>>>) -> Result<(), Box<dyn Er
         match event {
             CentralEvent::DeviceDiscovered(id) => {
                 let p = adapter.peripheral(&id).await?;
-                println!("BLE Device Discovered: {}", p.address());
+                info!("BLE Device Discovered: {}", p.address());
 
                 let s = p.properties().await?.unwrap().services;
                 if s.contains(&FreeBotUuid::Service.into()) {
@@ -216,16 +220,18 @@ async fn scan(bots: Arc<Mutex<Vec<FreeBotPeripheral>>>) -> Result<(), Box<dyn Er
             }
             CentralEvent::DeviceConnected(id) => {
                 let p = adapter.peripheral(&id).await?;
-                println!("BLE Device Connected: {}", p.address());
+                info!("BLE Device Connected: {}", p.address());
                 p.discover_services().await?;
 
                 if p.services()
                     .iter()
                     .any(|s| s.primary && s.uuid == FreeBotUuid::Service.into())
                 {
+                    let address = p.address().to_string();
                     bots.lock().await.push(FreeBotPeripheral {
                         ble_peripheral: p,
-                        digital_twin: FreeBot::new("FreeBot".to_string()),
+                        digital_twin: FreeBot::new(address),
+                        active: false,
                     });
                 } else {
                     p.disconnect().await?;
@@ -233,7 +239,7 @@ async fn scan(bots: Arc<Mutex<Vec<FreeBotPeripheral>>>) -> Result<(), Box<dyn Er
             }
             CentralEvent::DeviceDisconnected(id) => {
                 let p = adapter.peripheral(&id).await?;
-                println!("BLE Device Disconnected: {}", p.address());
+                info!("BLE Device Disconnected: {}", p.address());
                 bots.lock().await.retain(|p| p.ble_peripheral.id() != id);
             }
             _ => {}

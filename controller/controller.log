@@ -1,0 +1,60 @@
+2024-06-03T11:08:09.078115Z  INFO ThreadId(01) src/main.rs:34: Discovering bots...
+2024-06-03T11:08:09.083427Z  INFO ThreadId(02) src/ble.rs:214: BLE Device Discovered: D5:03:8C:55:C8:30
+2024-06-03T11:08:10.079002Z  INFO ThreadId(01) src/main.rs:39: Starting TUI...
+2024-06-03T11:08:14.192602Z  INFO ThreadId(02) src/ble.rs:214: BLE Device Discovered: C9:18:0D:B8:FA:69
+2024-06-03T11:08:14.193866Z  INFO ThreadId(02) src/ble.rs:223: BLE Device Connected: C9:18:0D:B8:FA:69
+2024-06-03T11:08:14.201285Z  INFO ThreadId(11) src/ble.rs:214: BLE Device Discovered: E7:B0:4C:D9:30:3C
+2024-06-03T11:08:14.440606Z  WARN ThreadId(01) src/ble.rs:107: Could not get LEDs: C9:18:0D:B8:FA:69
+2024-06-03T11:08:14.680670Z  WARN ThreadId(01) src/ble.rs:107: Could not get LEDs: C9:18:0D:B8:FA:69
+2024-06-03T11:08:14.920698Z  WARN ThreadId(01) src/ble.rs:107: Could not get LEDs: C9:18:0D:B8:FA:69
+2024-06-03T11:08:15.160151Z  WARN ThreadId(01) src/ble.rs:107: Could not get LEDs: C9:18:0D:B8:FA:69
+2024-06-03T11:08:15.439923Z  WARN ThreadId(01) src/ble.rs:107: Could not get LEDs: C9:18:0D:B8:FA:69
+2024-06-03T11:08:15.680205Z  WARN ThreadId(01) src/ble.rs:107: Could not get LEDs: C9:18:0D:B8:FA:69
+2024-06-03T11:08:15.960068Z  WARN ThreadId(01) src/ble.rs:107: Could not get LEDs: C9:18:0D:B8:FA:69
+2024-06-03T11:08:16.200407Z  WARN ThreadId(01) src/ble.rs:107: Could not get LEDs: C9:18:0D:B8:FA:69
+2024-06-03T11:08:16.559993Z  WARN ThreadId(01) src/ble.rs:107: Could not get LEDs: C9:18:0D:B8:FA:69
+2024-06-03T11:08:16.800946Z  WARN ThreadId(01) src/ble.rs:107: Could not get LEDs: C9:18:0D:B8:FA:69
+2024-06-03T11:08:17.120541Z  WARN ThreadId(01) src/ble.rs:107: Could not get LEDs: C9:18:0D:B8:FA:69
+2024-06-03T11:08:17.359745Z  WARN ThreadId(01) src/ble.rs:107: Could not get LEDs: C9:18:0D:B8:FA:69
+2024-06-03T11:08:17.640415Z  WARN ThreadId(01) src/ble.rs:107: Could not get LEDs: C9:18:0D:B8:FA:69
+2024-06-03T11:08:17.881521Z  WARN ThreadId(01) src/ble.rs:107: Could not get LEDs: C9:18:0D:B8:FA:69
+2024-06-03T11:08:18.088895Z  INFO ThreadId(11) src/ble.rs:214: BLE Device Discovered: E4:14:56:CA:1E:73
+2024-06-03T11:08:18.089645Z  INFO ThreadId(11) src/ble.rs:223: BLE Device Connected: E4:14:56:CA:1E:73
+2024-06-03T11:08:18.120460Z  WARN ThreadId(01) src/ble.rs:107: Could not get LEDs: C9:18:0D:B8:FA:69
+2024-06-03T11:08:18.361941Z  INFO ThreadId(16) src/ble.rs:223: BLE Device Connected: D5:03:8C:55:C8:30
+2024-06-03T11:08:18.369253Z  INFO ThreadId(16) src/ble.rs:223: BLE Device Connected: E7:B0:4C:D9:30:3C
+2024-06-03T11:08:18.439832Z  WARN ThreadId(01) src/ble.rs:107: Could not get LEDs: C9:18:0D:B8:FA:69
+2024-06-03T11:08:18.921289Z  WARN ThreadId(01) src/ble.rs:107: Could not get LEDs: E4:14:56:CA:1E:73
+2024-06-03T11:08:19.363292Z  WARN ThreadId(01) src/ble.rs:107: Could not get LEDs: D5:03:8C:55:C8:30
+2024-06-03T11:08:19.912162Z  WARN ThreadId(01) src/ble.rs:107: Could not get LEDs: E7:B0:4C:D9:30:3C
+2024-06-03T11:08:20.360104Z  WARN ThreadId(01) src/ble.rs:107: Could not get LEDs: C9:18:0D:B8:FA:69
+2024-06-03T11:08:20.681552Z  WARN ThreadId(01) src/ble.rs:107: Could not get LEDs: E4:14:56:CA:1E:73
+2024-06-03T11:08:20.962709Z  WARN ThreadId(01) src/ble.rs:107: Could not get LEDs: D5:03:8C:55:C8:30
+2024-06-03T11:08:21.284173Z  WARN ThreadId(01) src/ble.rs:107: Could not get LEDs: E7:B0:4C:D9:30:3C
+2024-06-03T11:08:21.639757Z  WARN ThreadId(01) src/ble.rs:107: Could not get LEDs: C9:18:0D:B8:FA:69
+2024-06-03T11:08:22.001095Z  WARN ThreadId(01) src/ble.rs:107: Could not get LEDs: E4:14:56:CA:1E:73
+2024-06-03T11:08:22.602045Z  WARN ThreadId(01) src/ble.rs:107: Could not get LEDs: D5:03:8C:55:C8:30
+2024-06-03T11:08:23.044090Z  WARN ThreadId(01) src/ble.rs:107: Could not get LEDs: E7:B0:4C:D9:30:3C
+2024-06-03T11:08:23.439830Z  WARN ThreadId(01) src/ble.rs:107: Could not get LEDs: C9:18:0D:B8:FA:69
+2024-06-03T11:08:23.721516Z  WARN ThreadId(01) src/ble.rs:107: Could not get LEDs: E4:14:56:CA:1E:73
+2024-06-03T11:08:24.083786Z  WARN ThreadId(01) src/ble.rs:107: Could not get LEDs: D5:03:8C:55:C8:30
+2024-06-03T11:08:24.404501Z  WARN ThreadId(01) src/ble.rs:107: Could not get LEDs: E7:B0:4C:D9:30:3C
+2024-06-03T11:08:24.920433Z  WARN ThreadId(01) src/ble.rs:107: Could not get LEDs: C9:18:0D:B8:FA:69
+2024-06-03T11:08:25.281524Z  WARN ThreadId(01) src/ble.rs:107: Could not get LEDs: E4:14:56:CA:1E:73
+2024-06-03T11:08:25.762403Z  WARN ThreadId(01) src/ble.rs:107: Could not get LEDs: D5:03:8C:55:C8:30
+2024-06-03T11:08:26.764183Z  WARN ThreadId(01) src/ble.rs:107: Could not get LEDs: E7:B0:4C:D9:30:3C
+2024-06-03T11:08:27.320451Z  WARN ThreadId(01) src/ble.rs:107: Could not get LEDs: C9:18:0D:B8:FA:69
+2024-06-03T11:08:27.561260Z  WARN ThreadId(01) src/ble.rs:107: Could not get LEDs: E4:14:56:CA:1E:73
+2024-06-03T11:08:27.883511Z  WARN ThreadId(01) src/ble.rs:107: Could not get LEDs: D5:03:8C:55:C8:30
+2024-06-03T11:08:28.204103Z  WARN ThreadId(01) src/ble.rs:107: Could not get LEDs: E7:B0:4C:D9:30:3C
+2024-06-03T11:08:28.720789Z  WARN ThreadId(01) src/ble.rs:107: Could not get LEDs: C9:18:0D:B8:FA:69
+2024-06-03T11:08:28.961190Z  WARN ThreadId(01) src/ble.rs:107: Could not get LEDs: E4:14:56:CA:1E:73
+2024-06-03T11:08:29.483537Z  WARN ThreadId(01) src/ble.rs:107: Could not get LEDs: D5:03:8C:55:C8:30
+2024-06-03T11:08:29.924387Z  WARN ThreadId(01) src/ble.rs:107: Could not get LEDs: E7:B0:4C:D9:30:3C
+2024-06-03T11:08:30.360463Z  WARN ThreadId(01) src/ble.rs:107: Could not get LEDs: C9:18:0D:B8:FA:69
+2024-06-03T11:08:30.682344Z  WARN ThreadId(01) src/ble.rs:107: Could not get LEDs: E4:14:56:CA:1E:73
+2024-06-03T11:08:31.162620Z  WARN ThreadId(01) src/ble.rs:107: Could not get LEDs: D5:03:8C:55:C8:30
+2024-06-03T11:08:31.524168Z  WARN ThreadId(01) src/ble.rs:107: Could not get LEDs: E7:B0:4C:D9:30:3C
+2024-06-03T11:08:31.782012Z  INFO ThreadId(01) src/main.rs:52: Exited TUI
+2024-06-03T11:08:32.565567Z  INFO ThreadId(11) src/ble.rs:242: BLE Device Disconnected: D5:03:8C:55:C8:30
+2024-06-03T11:08:38.483020Z  INFO ThreadId(01) src/main.rs:62: Disconnected bots
